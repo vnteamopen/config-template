@@ -2,7 +2,7 @@
 
 A tool for embedding a file's contents into the template file.
 
-The tool reads your input template file, loads pattern {{file "/file/want/embed"}}, adds embedded content to the template file and writes to the output path.
+The tool reads your input template file, loads pattern `{{file "/file/want/embed"}}`, adds embedded content to the template file and writes to the output path.
 
 ![config-template](https://raw.githubusercontent.com/vnteamopen/config-template/main/config-template.png)
 
