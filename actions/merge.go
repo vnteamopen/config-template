@@ -7,7 +7,7 @@ import (
 )
 
 func Merge(inputPath, outputPath string) error {
-	printInfo(inputPath, outputPath)
+	// printInfo(inputPath, outputPath)
 	if _, err := os.Stat(inputPath); errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("input '%s' doesn't exist", inputPath)
 	}

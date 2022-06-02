@@ -1,7 +1,6 @@
 package actions
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"regexp"
@@ -11,7 +10,7 @@ import (
 )
 
 const (
-	pattern = `{{file *"(.*)" *}}`
+	pattern = `{{file *"[a-zA-Z0-9_\.\-/\\ <>|:()&;]*" *}}`
 )
 
 // TODO: please convert it to use rune Walk and state checking
@@ -37,7 +36,6 @@ func parse(path string) (string, error) {
 		path := pattern[firstDoubleQuote+1 : lastDoubleQuote]
 		includedContent, err := parse(path)
 		if err != nil {
-			fmt.Println("WARN: ", path, ": ", err.Error())
 			return pattern
 		}
 
