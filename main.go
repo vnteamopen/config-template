@@ -14,6 +14,22 @@ const (
 	version = "1.0.0"
 )
 
+type FlagName string
+
+const (
+	FlagOverwrite FlagName = "overwrite"
+)
+
+var Flags = []cli.Flag{
+	&cli.BoolFlag{
+		Name:     string(FlagOverwrite),
+		Usage:    "-w",
+		Required: false,
+		Value:    false,
+		Aliases:  []string{"w"},
+	},
+}
+
 func main() {
 	app := &cli.App{
 		Name:     name,
@@ -25,6 +41,7 @@ func main() {
 		UsageText: `config-template /path/to/input/file /path/to/output/file
 config-template help`,
 		EnableBashCompletion: true,
+		Flags:                Flags,
 		Action:               Action,
 	}
 	app.Run(os.Args)
@@ -32,12 +49,20 @@ config-template help`,
 
 func Action(c *cli.Context) error {
 	c.App.Setup()
-	if c.NArg() <= 1 {
+
+	requiredArgs := 2
+	isOverwrite := c.Bool(string(FlagOverwrite))
+	if isOverwrite {
+		requiredArgs = 1
+	}
+
+	if c.NArg() < requiredArgs {
 		cli.ShowAppHelp(c)
 		return cli.Exit("", 0)
 	}
 	templatePath := c.Args().Get(0)
-	outputPath := c.Args().Get(1)
+	outputPath := c.Args().Get(requiredArgs - 1)
+
 	if err := actions.Merge(templatePath, outputPath); err != nil {
 		return cli.Exit(err.Error(), 1)
 	}
