@@ -60,11 +60,18 @@ func Action(c *cli.Context) error {
 		cli.ShowAppHelp(c)
 		return cli.Exit("", 0)
 	}
-	templatePath := c.Args().Get(0)
-	outputPath := c.Args().Get(requiredArgs - 1)
 
-	if err := actions.Merge(templatePath, outputPath); err != nil {
+	templatePath := c.Args().Get(0)
+
+	numberOfAdditionOutput := c.NArg() - requiredArgs
+	listOutputPath := []string{c.Args().Get(requiredArgs - 1)}
+	for i := 0; i < numberOfAdditionOutput; i++ {
+		listOutputPath = append(listOutputPath, c.Args().Get(requiredArgs+i))
+	}
+
+	if err := actions.Merge(templatePath, listOutputPath); err != nil {
 		return cli.Exit(err.Error(), 1)
 	}
+
 	return cli.Exit("", 0)
 }

@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func Merge(inputPath, outputPath string) error {
+func Merge(inputPath string, listOutputPath []string) error {
 	// printInfo(inputPath, outputPath)
 	if _, err := os.Stat(inputPath); errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("input '%s' doesn't exist", inputPath)
@@ -15,7 +15,13 @@ func Merge(inputPath, outputPath string) error {
 	if err != nil {
 		return err
 	}
-	return write(outputPath, outputContent)
+
+	for _, outputPath := range listOutputPath {
+		if err := write(outputPath, outputContent); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func printInfo(templatePath, outputPath string) {
