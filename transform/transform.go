@@ -1,7 +1,6 @@
 package transform
 
 import (
-	"fmt"
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
@@ -25,8 +24,7 @@ type transformer struct {
 }
 
 func NewTransformer() *transformer {
-	r, err := regexp.Compile(fileNamePattern)
-	fmt.Println(err)
+	r, _ := regexp.Compile(fileNamePattern)
 	return &transformer{
 		begin:      "{{file \"",
 		beginIndex: 0,
@@ -47,14 +45,21 @@ func (t *transformer) Transform(input byte) ([]byte, error) {
 	case t.isMatchedEnd(input):
 		t.endIndex += 1
 		if t.endIndex == len(t.end) {
-			return t.getTemplateContent()
+			output, err := t.getTemplateContent()
+			t.Reset()
+			return output, err
 		}
 		return nil, nil
 	default:
+		output := t.begin[:t.beginIndex] + t.filePath + t.end[:t.endIndex]
 		t.Reset()
+		if t.isMatchedBegin(input) {
+			t.beginIndex += 1
+			return []byte(output), nil
+		} else {
+			return []byte(output + string(input)), nil
+		}
 	}
-
-	return []byte{input}, nil
 }
 
 func (t *transformer) isMatchedBegin(input byte) bool {
