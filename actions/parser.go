@@ -40,7 +40,7 @@ func parse(path string) (string, error) {
 		}
 
 		// Remove end of file new line from POSIX standard: https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap03.html#tag_03_206
-		if len(includedContent) > 0 || includedContent[len(includedContent)-1] == byte(10) {
+		if len(includedContent) > 0 && includedContent[len(includedContent)-1] == byte(10) {
 			includedContent = includedContent[:len(includedContent)-1]
 		}
 		return includedContent

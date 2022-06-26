@@ -69,6 +69,22 @@ or
 config-template person.yml output.yml
 ```
 
+Overwrite template file with `-w` flag
+```bash
+config-template -w person.yml
+```
+
+Provide both flag `-w` and `output.yml` will overwrite template file and write output file
+```bash
+config-template -w person.yml output.yml
+```
+
+Provide multiple outputs
+```bash
+config-template person.yml output1.yml output2.yml 
+```
+
+
 3.2. Run config-template with docker
 
 ```bash
