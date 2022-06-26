@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"github.com/vnteamopen/config-template/transform"
 	"io"
 	"os"
 )
@@ -45,7 +44,7 @@ func write(path, content string) error {
 	return nil
 }
 
-func CharByCharMerge(inputPath string, outputPath string) error {
+func CharByCharMerge(inputPath string, listOutputPath []string) error {
 	if _, err := os.Stat(inputPath); errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("input '%s' doesn't exist", inputPath)
 	}
@@ -61,19 +60,22 @@ func CharByCharMerge(inputPath string, outputPath string) error {
 	}()
 	in := bufio.NewReader(input)
 
-	output, err := os.Create(outputPath)
-	if err != nil {
-		return fmt.Errorf("cannot create output file '%s': %s", outputPath, err.Error())
-	}
-	defer func() {
-		if err := output.Close(); err != nil {
-			fmt.Printf("cannot close file '%s': %s", outputPath, err.Error())
+	outWriters := make([]*bufio.Writer, len(listOutputPath))
+	for i, outputPath := range listOutputPath {
+		output, err := os.Create(outputPath)
+		if err != nil {
+			return fmt.Errorf("cannot create output file '%s': %s", outputPath, err.Error())
 		}
-	}()
-	out := bufio.NewWriter(output)
+		defer func() {
+			if err := output.Close(); err != nil {
+				fmt.Printf("cannot close file '%s': %s", outputPath, err.Error())
+			}
+		}()
+		outWriters[i] = bufio.NewWriter(output)
+	}
 
 	buf := make([]byte, 1)
-	transformer := transform.NewTransformer()
+	transformer := NewSeqParser()
 	for {
 		n, err := in.Read(buf)
 		if err != nil && err != io.EOF {
@@ -95,13 +97,18 @@ func CharByCharMerge(inputPath string, outputPath string) error {
 		if transformerBuf == nil {
 			continue
 		}
-		if _, err := out.Write(transformerBuf); err != nil {
-			return fmt.Errorf("cannot write file '%s': %s", outputPath, err.Error())
+
+		for i := range outWriters {
+			if _, err := outWriters[i].Write(transformerBuf); err != nil {
+				return fmt.Errorf("cannot write file '%s': %s", listOutputPath[i], err.Error())
+			}
 		}
 	}
 
-	if err := out.Flush(); err != nil {
-		return fmt.Errorf("cannot write file '%s': %s", outputPath, err.Error())
+	for i := range outWriters {
+		if err := outWriters[i].Flush(); err != nil {
+			return fmt.Errorf("cannot write file '%s': %s", listOutputPath[i], err.Error())
+		}
 	}
 
 	return nil

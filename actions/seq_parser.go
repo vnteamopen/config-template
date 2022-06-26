@@ -1,4 +1,4 @@
-package transform
+package actions
 
 import (
 	"github.com/pkg/errors"
@@ -14,7 +14,7 @@ type Pattern struct {
 	end   rune
 }
 
-type transformer struct {
+type sequenceParser struct {
 	begin      string
 	beginIndex int
 	end        string
@@ -23,9 +23,9 @@ type transformer struct {
 	regexFile  *regexp.Regexp
 }
 
-func NewTransformer() *transformer {
+func NewSeqParser() *sequenceParser {
 	r, _ := regexp.Compile(fileNamePattern)
-	return &transformer{
+	return &sequenceParser{
 		begin:      "{{file \"",
 		beginIndex: 0,
 		end:        "\"}}",
@@ -34,7 +34,7 @@ func NewTransformer() *transformer {
 	}
 }
 
-func (t *transformer) Transform(input byte) ([]byte, error) {
+func (t *sequenceParser) Transform(input byte) ([]byte, error) {
 	switch true {
 	case t.isMatchedBegin(input):
 		t.beginIndex += 1
@@ -62,11 +62,11 @@ func (t *transformer) Transform(input byte) ([]byte, error) {
 	}
 }
 
-func (t *transformer) isMatchedBegin(input byte) bool {
+func (t *sequenceParser) isMatchedBegin(input byte) bool {
 	return !t.isEndBegin() && input == t.begin[t.beginIndex]
 }
 
-func (t *transformer) isMatchedFileName(input byte) bool {
+func (t *sequenceParser) isMatchedFileName(input byte) bool {
 	if t.isEndBegin() && t.endIndex == 0 {
 		return t.regexFile.MatchString(string(input))
 	}
@@ -74,7 +74,7 @@ func (t *transformer) isMatchedFileName(input byte) bool {
 	return false
 }
 
-func (t *transformer) isMatchedEnd(input byte) bool {
+func (t *sequenceParser) isMatchedEnd(input byte) bool {
 	if !t.isEndBegin() || len(t.filePath) == 0 || t.isEndEnd() {
 		return false
 	}
@@ -82,21 +82,21 @@ func (t *transformer) isMatchedEnd(input byte) bool {
 	return t.end[t.endIndex] == input
 }
 
-func (t *transformer) isEndBegin() bool {
+func (t *sequenceParser) isEndBegin() bool {
 	return t.beginIndex == len(t.begin)
 }
 
-func (t *transformer) isEndEnd() bool {
+func (t *sequenceParser) isEndEnd() bool {
 	return t.endIndex == len(t.end)
 }
 
-func (t *transformer) Reset() {
+func (t *sequenceParser) Reset() {
 	t.beginIndex = 0
 	t.endIndex = 0
 	t.filePath = ""
 }
 
-func (t *transformer) getTemplateContent() ([]byte, error) {
+func (t *sequenceParser) getTemplateContent() ([]byte, error) {
 	file, err := os.Open(t.filePath)
 	if err != nil {
 		return nil, errors.Wrap(err, "open")

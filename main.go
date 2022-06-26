@@ -50,29 +50,40 @@ config-template help`,
 func Action(c *cli.Context) error {
 	c.App.Setup()
 
-	//requiredArgs := 2
-	//isOverwrite := c.Bool(string(FlagOverwrite))
-	//if isOverwrite {
-	//	requiredArgs = 1
-	//}
-	//
-	//if c.NArg() < requiredArgs {
-	//	cli.ShowAppHelp(c)
-	//	return cli.Exit("", 0)
-	//}
-	//
-	//templatePath := c.Args().Get(0)
-	//
-	//numberOfAdditionOutput := c.NArg() - requiredArgs
-	//listOutputPath := []string{c.Args().Get(requiredArgs - 1)}
-	//for i := 0; i < numberOfAdditionOutput; i++ {
-	//	listOutputPath = append(listOutputPath, c.Args().Get(requiredArgs+i))
-	//}
+	requiredArgs := 2
+	isOverwrite := c.Bool(string(FlagOverwrite))
+	if isOverwrite {
+		requiredArgs = 1
+	}
 
-	templatePath := "./output/test"
-	listOutputPath := []string{"./output/test1"}
-	if err := actions.CharByCharMerge(templatePath, listOutputPath[0]); err != nil {
+	if c.NArg() < requiredArgs {
+		cli.ShowAppHelp(c)
+		return cli.Exit("", 0)
+	}
+
+	templatePath := c.Args().Get(0)
+	numberOfAdditionOutput := c.NArg() - requiredArgs
+
+	listOutputPath := make([]string, 0, c.NArg())
+	if isOverwrite {
+		listOutputPath = append(listOutputPath, actions.CreateTmpFile(templatePath))
+	} else {
+		firstOutPut := c.Args().Get(requiredArgs - 1)
+		listOutputPath = append(listOutputPath, firstOutPut)
+	}
+
+	for i := 0; i < numberOfAdditionOutput; i++ {
+		listOutputPath = append(listOutputPath, c.Args().Get(requiredArgs+i))
+	}
+
+	if err := actions.CharByCharMerge(templatePath, listOutputPath); err != nil {
 		return cli.Exit(err.Error(), 1)
+	}
+
+	if isOverwrite {
+		if err := actions.OverwriteInput(templatePath); err != nil {
+			return cli.Exit(err.Error(), 1)
+		}
 	}
 
 	return cli.Exit("", 0)
