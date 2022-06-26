@@ -47,3 +47,8 @@ func parse(path string) (string, error) {
 	})
 	return output, nil
 }
+
+func charByCharParse(path string) (string, error) {
+
+	return "", nil
+}
