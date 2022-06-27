@@ -45,41 +45,73 @@ func write(path, content string) error {
 }
 
 func CharByCharMerge(inputPath string, listOutputPath []string) error {
-	if _, err := os.Stat(inputPath); errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("input '%s' doesn't exist", inputPath)
-	}
-
-	input, err := os.Open(inputPath)
+	inFile, err := getInputFile(inputPath)
+	defer closeFile(inFile)
 	if err != nil {
-		return fmt.Errorf("cannot open input file '%s': %s", inputPath, err.Error())
+		return err
 	}
-	defer func() {
-		if err := input.Close(); err != nil {
-			fmt.Printf("cannot close file '%s': %s", inputPath, err.Error())
-		}
-	}()
-	in := bufio.NewReader(input)
 
-	outWriters := make([]*bufio.Writer, len(listOutputPath))
-	for i, outputPath := range listOutputPath {
-		output, err := os.Create(outputPath)
+	outFiles, err := getOutputFiles(listOutputPath)
+	defer closeFile(outFiles...)
+	if err != nil {
+		return err
+	}
+
+	inReader, outWriters := getInOutStreams(inFile, outFiles)
+	return parseInputToOutput(inReader, outWriters)
+}
+
+func getInputFile(path string) (*os.File, error) {
+	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		return nil, fmt.Errorf("input '%s' doesn't exist", path)
+	}
+
+	input, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("cannot open input file '%s': %s", path, err.Error())
+	}
+
+	return input, nil
+}
+
+func getOutputFiles(listPath []string) ([]*os.File, error) {
+	outputFiles := make([]*os.File, len(listPath))
+	for i, path := range listPath {
+		output, err := os.Create(path)
 		if err != nil {
-			return fmt.Errorf("cannot create output file '%s': %s", outputPath, err.Error())
+			return nil, fmt.Errorf("cannot create output file '%s': %s", path, err.Error())
 		}
-		defer func() {
-			if err := output.Close(); err != nil {
-				fmt.Printf("cannot close file '%s': %s", outputPath, err.Error())
-			}
-		}()
+		outputFiles[i] = output
+	}
+
+	return outputFiles, nil
+}
+
+func getInOutStreams(inputFile *os.File, listOutputFile []*os.File) (*bufio.Reader, []*bufio.Writer) {
+	inReader := bufio.NewReader(inputFile)
+	outWriters := make([]*bufio.Writer, len(listOutputFile))
+	for i, output := range listOutputFile {
 		outWriters[i] = bufio.NewWriter(output)
 	}
 
+	return inReader, outWriters
+}
+
+func closeFile(files ...*os.File) {
+	for _, file := range files {
+		if err := file.Close(); err != nil {
+			fmt.Printf("cannot close file: '%s'", err.Error())
+		}
+	}
+}
+
+func parseInputToOutput(inReader *bufio.Reader, outWriters []*bufio.Writer) error {
 	buf := make([]byte, 1)
 	transformer := NewSeqParser()
 	for {
-		n, err := in.Read(buf)
+		n, err := inReader.Read(buf)
 		if err != nil && err != io.EOF {
-			return fmt.Errorf("cannot read file '%s': %s", inputPath, err.Error())
+			return fmt.Errorf("cannot read file: %s", err.Error())
 		}
 
 		if err == io.EOF {
@@ -100,14 +132,14 @@ func CharByCharMerge(inputPath string, listOutputPath []string) error {
 
 		for i := range outWriters {
 			if _, err := outWriters[i].Write(transformerBuf); err != nil {
-				return fmt.Errorf("cannot write file '%s': %s", listOutputPath[i], err.Error())
+				return fmt.Errorf("cannot write file: %s", err.Error())
 			}
 		}
 	}
 
 	for i := range outWriters {
 		if err := outWriters[i].Flush(); err != nil {
-			return fmt.Errorf("cannot write file '%s': %s", listOutputPath[i], err.Error())
+			return fmt.Errorf("cannot write file: %s", err.Error())
 		}
 	}
 

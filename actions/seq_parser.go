@@ -34,27 +34,27 @@ func NewSeqParser() *sequenceParser {
 	}
 }
 
-func (t *sequenceParser) Transform(input byte) ([]byte, error) {
+func (p *sequenceParser) Transform(input byte) ([]byte, error) {
 	switch true {
-	case t.isMatchedBegin(input):
-		t.beginIndex += 1
+	case p.isMatchedBegin(input):
+		p.beginIndex += 1
 		return nil, nil
-	case t.isMatchedFileName(input):
-		t.filePath += string(input)
+	case p.isMatchedFileName(input):
+		p.filePath += string(input)
 		return nil, nil
-	case t.isMatchedEnd(input):
-		t.endIndex += 1
-		if t.endIndex == len(t.end) {
-			output, err := t.getTemplateContent()
-			t.Reset()
+	case p.isMatchedEnd(input):
+		p.endIndex += 1
+		if p.endIndex == len(p.end) {
+			output, err := p.getTemplateContent()
+			p.Reset()
 			return output, err
 		}
 		return nil, nil
 	default:
-		output := t.begin[:t.beginIndex] + t.filePath + t.end[:t.endIndex]
-		t.Reset()
-		if t.isMatchedBegin(input) {
-			t.beginIndex += 1
+		output := p.begin[:p.beginIndex] + p.filePath + p.end[:p.endIndex]
+		p.Reset()
+		if p.isMatchedBegin(input) {
+			p.beginIndex += 1
 			return []byte(output), nil
 		} else {
 			return []byte(output + string(input)), nil
@@ -62,42 +62,42 @@ func (t *sequenceParser) Transform(input byte) ([]byte, error) {
 	}
 }
 
-func (t *sequenceParser) isMatchedBegin(input byte) bool {
-	return !t.isEndBegin() && input == t.begin[t.beginIndex]
+func (p *sequenceParser) isMatchedBegin(input byte) bool {
+	return !p.isEndBegin() && input == p.begin[p.beginIndex]
 }
 
-func (t *sequenceParser) isMatchedFileName(input byte) bool {
-	if t.isEndBegin() && t.endIndex == 0 {
-		return t.regexFile.MatchString(string(input))
+func (p *sequenceParser) isMatchedFileName(input byte) bool {
+	if p.isEndBegin() && p.endIndex == 0 {
+		return p.regexFile.MatchString(string(input))
 	}
 
 	return false
 }
 
-func (t *sequenceParser) isMatchedEnd(input byte) bool {
-	if !t.isEndBegin() || len(t.filePath) == 0 || t.isEndEnd() {
+func (p *sequenceParser) isMatchedEnd(input byte) bool {
+	if !p.isEndBegin() || len(p.filePath) == 0 || p.isEndEnd() {
 		return false
 	}
 
-	return t.end[t.endIndex] == input
+	return p.end[p.endIndex] == input
 }
 
-func (t *sequenceParser) isEndBegin() bool {
-	return t.beginIndex == len(t.begin)
+func (p *sequenceParser) isEndBegin() bool {
+	return p.beginIndex == len(p.begin)
 }
 
-func (t *sequenceParser) isEndEnd() bool {
-	return t.endIndex == len(t.end)
+func (p *sequenceParser) isEndEnd() bool {
+	return p.endIndex == len(p.end)
 }
 
-func (t *sequenceParser) Reset() {
-	t.beginIndex = 0
-	t.endIndex = 0
-	t.filePath = ""
+func (p *sequenceParser) Reset() {
+	p.beginIndex = 0
+	p.endIndex = 0
+	p.filePath = ""
 }
 
-func (t *sequenceParser) getTemplateContent() ([]byte, error) {
-	file, err := os.Open(t.filePath)
+func (p *sequenceParser) getTemplateContent() ([]byte, error) {
+	file, err := os.Open(p.filePath)
 	if err != nil {
 		return nil, errors.Wrap(err, "open")
 	}
