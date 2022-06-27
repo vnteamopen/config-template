@@ -96,6 +96,12 @@ func (p *sequenceParser) Reset() {
 	p.filePath = ""
 }
 
+func (p *sequenceParser) Flush() []byte {
+	output := p.begin[:p.beginIndex] + p.filePath + p.end[:p.endIndex]
+	p.Reset()
+	return []byte(output)
+}
+
 func (p *sequenceParser) getTemplateContent() ([]byte, error) {
 	file, err := os.Open(p.filePath)
 	if err != nil {

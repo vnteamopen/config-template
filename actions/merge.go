@@ -137,7 +137,11 @@ func parseInputToOutput(inReader *bufio.Reader, outWriters []*bufio.Writer) erro
 		}
 	}
 
+	remainBuf := transformer.Flush()
 	for i := range outWriters {
+		if _, err := outWriters[i].Write(remainBuf); err != nil {
+			return fmt.Errorf("cannot write file: %s", err.Error())
+		}
 		if err := outWriters[i].Flush(); err != nil {
 			return fmt.Errorf("cannot write file: %s", err.Error())
 		}
