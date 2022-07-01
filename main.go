@@ -62,15 +62,28 @@ func Action(c *cli.Context) error {
 	}
 
 	templatePath := c.Args().Get(0)
-
 	numberOfAdditionOutput := c.NArg() - requiredArgs
-	listOutputPath := []string{c.Args().Get(requiredArgs - 1)}
+
+	listOutputPath := make([]string, 0, c.NArg())
+	if isOverwrite {
+		listOutputPath = append(listOutputPath, actions.CreateTmpFile(templatePath))
+	} else {
+		firstOutPut := c.Args().Get(requiredArgs - 1)
+		listOutputPath = append(listOutputPath, firstOutPut)
+	}
+
 	for i := 0; i < numberOfAdditionOutput; i++ {
 		listOutputPath = append(listOutputPath, c.Args().Get(requiredArgs+i))
 	}
 
-	if err := actions.Merge(templatePath, listOutputPath); err != nil {
+	if err := actions.CharByCharMerge(templatePath, listOutputPath); err != nil {
 		return cli.Exit(err.Error(), 1)
+	}
+
+	if isOverwrite {
+		if err := actions.OverwriteInput(templatePath); err != nil {
+			return cli.Exit(err.Error(), 1)
+		}
 	}
 
 	return cli.Exit("", 0)
