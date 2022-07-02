@@ -104,7 +104,7 @@ config-template person.yml output1.yml output2.yml
 
 4. Support output to stdout
 ```bash
-config-template -w person.yml
+config-template -out-screen person.yml
 ```
 
 ## Future
