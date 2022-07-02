@@ -7,44 +7,25 @@ import (
 	"github.com/pkg/errors"
 )
 
-type WriteTempRequest struct {
-	InputPath      string
-	Overwrite      bool
-	OverwritePath  string
-	OutputToScreen bool
-}
-
-func WriteTemp(r WriteTempRequest) error {
-	outs := []io.Writer{}
-
-	if r.Overwrite {
-		outputFile, err := os.Create(r.OverwritePath)
-		if err != nil {
-			return errors.Wrap(err, "open")
-		}
-		defer outputFile.Close()
-		outs = append(outs, outputFile)
-	}
-
-	if r.OutputToScreen {
-		outs = append(outs, os.Stdout)
-	}
-
-	if len(outs) == 0 {
-		return nil
-	}
-
-	tmpFile := CreateTmpFile(r.InputPath)
-	in, err := os.Open(tmpFile)
+func OverwriteInput(input string) error {
+	inputFile, err := os.Open(CreateTmpFile(input))
 	if err != nil {
 		return errors.Wrap(err, "open")
 	}
-	defer in.Close()
+	defer inputFile.Close()
 
-	if _, err := io.Copy(io.MultiWriter(outs...), in); err != nil {
+	outputFile, err := os.Create(input)
+	if err != nil {
+		return errors.Wrap(err, "open")
+	}
+	defer outputFile.Close()
+
+	_, err = io.Copy(outputFile, inputFile)
+	if err != nil {
 		return err
 	}
-	return os.Remove(tmpFile)
+
+	return os.Remove(CreateTmpFile(input))
 }
 
 func CreateTmpFile(filePath string) string {

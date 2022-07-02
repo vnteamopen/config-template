@@ -60,55 +60,44 @@ func Action(c *cli.Context) error {
 
 	isOverwrite := c.Bool(string(FlagOverwrite))
 	isOutputToScreen := c.Bool(string(FlagOutputToScreen))
-	valid, requiredArgs := validArgs(c.NArg(), isOverwrite, isOutputToScreen)
-	if !valid {
+	if valid := validArgs(c.NArg(), isOverwrite, isOutputToScreen); !valid {
 		cli.ShowAppHelp(c)
 		return cli.Exit("", 1)
 	}
-	templatePath, outputPaths := getPaths(c.Args(), requiredArgs, isOverwrite, isOutputToScreen)
+	templatePath, outputPaths := getPaths(c.Args(), isOverwrite)
 
-	if err := actions.CharByCharMerge(templatePath, outputPaths); err != nil {
+	if err := actions.CharByCharMerge(templatePath, outputPaths, isOutputToScreen); err != nil {
 		return cli.Exit(err.Error(), 1)
 	}
 
-	writeTmpArgs := actions.WriteTempRequest{
-		InputPath:      templatePath,
-		Overwrite:      isOverwrite,
-		OverwritePath:  templatePath,
-		OutputToScreen: isOutputToScreen,
-	}
-	if err := actions.WriteTemp(writeTmpArgs); err != nil {
-		return cli.Exit(err.Error(), 1)
+	if isOverwrite {
+		if err := actions.OverwriteInput(templatePath); err != nil {
+			return cli.Exit(err.Error(), 1)
+		}
 	}
 
 	return cli.Exit("", 0)
 }
 
-func validArgs(totalArgs int, isOverwrite, isOutputToScreen bool) (valid bool, requiredArgs int) {
-	requiredArgs = 2
+func validArgs(totalArgs int, isOverwrite, isOutputToScreen bool) bool {
+	requiredArgs := 2
 	if isOverwrite || isOutputToScreen {
 		requiredArgs = 1
 	}
 
-	return totalArgs >= requiredArgs, requiredArgs
+	return totalArgs >= requiredArgs
 }
 
-func getPaths(args cli.Args, requiredArgs int, isOverwrite, isOutputToScreen bool) (templatePath string, listOutputPath []string) {
-	totalArgs := args.Len()
+func getPaths(args cli.Args, isOverwrite bool) (templatePath string, listOutputPath []string) {
 	templatePath = args.Get(0)
-	numberOfAdditionOutput := totalArgs - requiredArgs
+	noOutputs := args.Len() - 1
 
-	listOutputPath = make([]string, 0, totalArgs)
-	if isOverwrite || isOutputToScreen {
+	listOutputPath = make([]string, 0, args.Len())
+	if isOverwrite {
 		listOutputPath = append(listOutputPath, actions.CreateTmpFile(templatePath))
-	} else {
-		firstOutPut := args.Get(requiredArgs - 1)
-		listOutputPath = append(listOutputPath, firstOutPut)
 	}
-
-	for i := 0; i < numberOfAdditionOutput; i++ {
-		listOutputPath = append(listOutputPath, args.Get(requiredArgs+i))
+	for i := 0; i < noOutputs; i++ {
+		listOutputPath = append(listOutputPath, args.Get(i+1))
 	}
-
 	return templatePath, listOutputPath
 }
