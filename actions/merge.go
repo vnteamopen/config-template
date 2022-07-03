@@ -44,14 +44,14 @@ func write(path, content string) error {
 	return nil
 }
 
-func CharByCharMerge(inputPath string, listOutputPath []string) error {
+func CharByCharMerge(inputPath string, listOutputPath []string, isOutputToScreen bool) error {
 	inFile, err := getInputFile(inputPath)
 	defer closeFile(inFile)
 	if err != nil {
 		return err
 	}
 
-	outFiles, err := getOutputFiles(listOutputPath)
+	outFiles, err := getOutputFiles(listOutputPath, isOutputToScreen)
 	defer closeFile(outFiles...)
 	if err != nil {
 		return err
@@ -74,7 +74,7 @@ func getInputFile(path string) (*os.File, error) {
 	return input, nil
 }
 
-func getOutputFiles(listPath []string) ([]*os.File, error) {
+func getOutputFiles(listPath []string, isOutputToScreen bool) ([]*os.File, error) {
 	outputFiles := make([]*os.File, len(listPath))
 	for i, path := range listPath {
 		output, err := os.Create(path)
@@ -82,6 +82,9 @@ func getOutputFiles(listPath []string) ([]*os.File, error) {
 			return nil, fmt.Errorf("cannot create output file '%s': %s", path, err.Error())
 		}
 		outputFiles[i] = output
+	}
+	if isOutputToScreen {
+		outputFiles = append(outputFiles, os.Stdout)
 	}
 
 	return outputFiles, nil
@@ -93,7 +96,6 @@ func getInOutStreams(inputFile *os.File, listOutputFile []*os.File) (*bufio.Read
 	for i, output := range listOutputFile {
 		outWriters[i] = bufio.NewWriter(output)
 	}
-
 	return inReader, outWriters
 }
 

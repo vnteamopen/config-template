@@ -1,9 +1,10 @@
 package actions
 
 import (
-	"github.com/pkg/errors"
 	"io"
 	"os"
+
+	"github.com/pkg/errors"
 )
 
 func OverwriteInput(input string) error {
