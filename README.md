@@ -107,6 +107,12 @@ config-template person.yml output1.yml output2.yml
 config-template -out-screen person.yml
 ```
 
+5. Custom template's pattern
+```bash
+# change default pattern `{{file "path"}}` to `%%file "path"%%`
+config-template -c %%,%% person.yml output.yml
+```
+
 ## Future
 
 Check https://github.com/vnteamopen/config-template/issues
