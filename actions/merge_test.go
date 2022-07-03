@@ -16,6 +16,7 @@ func TestParse(t *testing.T) {
 
 	testCases := []struct {
 		name        string
+		pattern     []string
 		template    string
 		samplePath  string
 		checkResult func(expected, received string)
@@ -115,17 +116,30 @@ func TestParse(t *testing.T) {
 				}
 			},
 		},
+		{
+			name:       "Matched custom pattern - Simple template",
+			pattern:    []string{"%", "%"},
+			template:   fmt.Sprintf(`%%file "%s"%%`, sample1Path),
+			samplePath: sample1Path,
+			checkResult: func(sampleContent, received string) {
+				if sampleContent != received {
+					t.Errorf("Wrong parse: \nExpected: %s\nReceived: %s", sampleContent, received)
+				}
+			},
+			checkError: func(err error) {},
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			reader := strings.NewReader(tc.template)
 			in := bufio.NewReader(reader)
+			parser := NewSeqParser(tc.pattern)
 
 			writer := new(strings.Builder)
 			out := bufio.NewWriter(writer)
 
-			err := parseInputToOutput(in, []*bufio.Writer{out})
+			err := parseInputToOutput(parser, in, []*bufio.Writer{out})
 			if err != nil {
 				tc.checkError(err)
 				return

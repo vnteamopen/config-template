@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"fmt"
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
@@ -14,6 +15,11 @@ type Pattern struct {
 	end   rune
 }
 
+type Parser interface {
+	Transform(input byte) ([]byte, error)
+	Flush() []byte
+}
+
 type sequenceParser struct {
 	begin      string
 	beginIndex int
@@ -23,12 +29,15 @@ type sequenceParser struct {
 	regexFile  *regexp.Regexp
 }
 
-func NewSeqParser() *sequenceParser {
+func NewSeqParser(pattern []string) Parser {
 	r, _ := regexp.Compile(fileNamePattern)
+
+	begin, end := extractPattern(pattern)
+
 	return &sequenceParser{
-		begin:      "{{file \"",
+		begin:      begin,
 		beginIndex: 0,
-		end:        "\"}}",
+		end:        end,
 		endIndex:   0,
 		regexFile:  r,
 	}
@@ -113,4 +122,14 @@ func (p *sequenceParser) getTemplateContent() ([]byte, error) {
 		return nil, errors.Wrap(err, "read file")
 	}
 	return fileContent, nil
+}
+
+func extractPattern(pattern []string) (string, string) {
+	if len(pattern) != 2 {
+		pattern = []string{"{{", "}}"}
+	}
+	begin := fmt.Sprintf("%sfile \"", pattern[0])
+	end := fmt.Sprintf("\"%s", pattern[1])
+
+	return begin, end
 }

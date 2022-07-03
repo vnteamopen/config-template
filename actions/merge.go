@@ -44,21 +44,30 @@ func write(path, content string) error {
 	return nil
 }
 
-func CharByCharMerge(inputPath string, listOutputPath []string, isOutputToScreen bool) error {
-	inFile, err := getInputFile(inputPath)
+type MergeRequest struct {
+	InputPath        string
+	ListOutputPath   []string
+	IsOutputToScreen bool
+	Pattern          []string
+}
+
+func CharByCharMerge(req MergeRequest) error {
+	inFile, err := getInputFile(req.InputPath)
 	defer closeFile(inFile)
 	if err != nil {
 		return err
 	}
 
-	outFiles, err := getOutputFiles(listOutputPath, isOutputToScreen)
+	outFiles, err := getOutputFiles(req.ListOutputPath, req.IsOutputToScreen)
 	defer closeFile(outFiles...)
 	if err != nil {
 		return err
 	}
 
 	inReader, outWriters := getInOutStreams(inFile, outFiles)
-	return parseInputToOutput(inReader, outWriters)
+
+	parser := NewSeqParser(req.Pattern)
+	return parseInputToOutput(parser, inReader, outWriters)
 }
 
 func getInputFile(path string) (*os.File, error) {
@@ -107,9 +116,8 @@ func closeFile(files ...*os.File) {
 	}
 }
 
-func parseInputToOutput(inReader *bufio.Reader, outWriters []*bufio.Writer) error {
+func parseInputToOutput(parser Parser, inReader *bufio.Reader, outWriters []*bufio.Writer) error {
 	buf := make([]byte, 1)
-	transformer := NewSeqParser()
 	for {
 		n, err := inReader.Read(buf)
 		if err != nil && err != io.EOF {
@@ -124,7 +132,7 @@ func parseInputToOutput(inReader *bufio.Reader, outWriters []*bufio.Writer) erro
 			continue
 		}
 
-		transformerBuf, err := transformer.Transform(buf[0])
+		transformerBuf, err := parser.Transform(buf[0])
 		if err != nil {
 			return err
 		}
@@ -139,7 +147,7 @@ func parseInputToOutput(inReader *bufio.Reader, outWriters []*bufio.Writer) erro
 		}
 	}
 
-	remainBuf := transformer.Flush()
+	remainBuf := parser.Flush()
 	for i := range outWriters {
 		if _, err := outWriters[i].Write(remainBuf); err != nil {
 			return fmt.Errorf("cannot write file: %s", err.Error())

@@ -19,6 +19,7 @@ type FlagName string
 const (
 	FlagOverwrite      FlagName = "overwrite"
 	FlagOutputToScreen FlagName = "out-screen"
+	FlagCustomPattern  FlagName = "custom"
 )
 
 var Flags = []cli.Flag{
@@ -35,6 +36,14 @@ var Flags = []cli.Flag{
 		Required: false,
 		Value:    false,
 	},
+	&cli.StringSliceFlag{
+		Name:       string(FlagCustomPattern),
+		Usage:      "-c",
+		Required:   false,
+		HasBeenSet: true,
+		Value:      cli.NewStringSlice("{{", "}}"),
+		Aliases:    []string{"c"},
+	},
 }
 
 func main() {
@@ -46,12 +55,14 @@ func main() {
 		HelpName: "config-template",
 		Usage:    "A tool to merge file's contents to a template. Embedded pattern is {{file \"\"}}",
 		UsageText: `config-template /path/to/input/file /path/to/output/file
+config-template -c begin-pattern,end-pattern /path/to/input/file /path/to/output/file
 config-template -w /path/to/input/file
 config-template help`,
 		EnableBashCompletion: true,
 		Flags:                Flags,
 		Action:               Action,
 	}
+
 	app.Run(os.Args)
 }
 
@@ -66,7 +77,18 @@ func Action(c *cli.Context) error {
 	}
 	templatePath, outputPaths := getPaths(c.Args(), isOverwrite)
 
-	if err := actions.CharByCharMerge(templatePath, outputPaths, isOutputToScreen); err != nil {
+	pattern := c.StringSlice(string(FlagCustomPattern))
+	if valid := validPattern(pattern); !valid {
+		cli.ShowAppHelp(c)
+		return cli.Exit("Custom pattern must contain begin and end part", 1)
+	}
+
+	if err := actions.CharByCharMerge(actions.MergeRequest{
+		InputPath:        templatePath,
+		ListOutputPath:   outputPaths,
+		IsOutputToScreen: isOutputToScreen,
+		Pattern:          pattern,
+	}); err != nil {
 		return cli.Exit(err.Error(), 1)
 	}
 
@@ -100,4 +122,11 @@ func getPaths(args cli.Args, isOverwrite bool) (templatePath string, listOutputP
 		listOutputPath = append(listOutputPath, args.Get(i+1))
 	}
 	return templatePath, listOutputPath
+}
+
+func validPattern(pattern []string) bool {
+	if len(pattern) != 2 {
+		return false
+	}
+	return true
 }
