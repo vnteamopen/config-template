@@ -32,7 +32,7 @@ type sequenceParser struct {
 func NewSeqParser(pattern []string) Parser {
 	r, _ := regexp.Compile(fileNamePattern)
 
-	begin, end := assignPattern(pattern)
+	begin, end := extractPattern(pattern)
 
 	return &sequenceParser{
 		begin:      begin,
@@ -124,7 +124,7 @@ func (p *sequenceParser) getTemplateContent() ([]byte, error) {
 	return fileContent, nil
 }
 
-func assignPattern(pattern []string) (string, string) {
+func extractPattern(pattern []string) (string, string) {
 	if len(pattern) != 2 {
 		pattern = []string{"{{", "}}"}
 	}
