@@ -80,7 +80,7 @@ func Action(c *cli.Context) error {
 	pattern := c.StringSlice(string(FlagCustomPattern))
 	if valid := validPattern(pattern); !valid {
 		cli.ShowAppHelp(c)
-		return cli.Exit("", 1)
+		return cli.Exit("Custom pattern must contain begin and end part", 1)
 	}
 
 	if err := actions.CharByCharMerge(actions.MergeRequest{
