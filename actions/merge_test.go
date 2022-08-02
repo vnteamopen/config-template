@@ -165,6 +165,8 @@ func TestParse(t *testing.T) {
 				t.Errorf("Failed to open sample file: %v+", err.Error())
 				return
 			}
+			defer sample.Close()
+
 			sampleContent, err := ioutil.ReadAll(sample)
 			if err != nil {
 				t.Errorf("Failed to read sample content: %v+", err.Error())
@@ -177,6 +179,8 @@ func TestParse(t *testing.T) {
 					t.Errorf("Failed to open template file: %v+", err.Error())
 					return
 				}
+				defer templateFile.Close()
+
 				templateContent, err := ioutil.ReadAll(templateFile)
 				if err != nil {
 					t.Errorf("Failed to read template file: %v+", err.Error())
