@@ -53,10 +53,10 @@ type MergeRequest struct {
 
 func CharByCharMerge(req MergeRequest) error {
 	inFile, err := getInputFile(req.InputPath)
-	defer closeFile(inFile)
 	if err != nil {
 		return err
 	}
+	defer closeFile(inFile)
 
 	outFiles, err := getOutputFiles(req.ListOutputPath, req.IsOutputToScreen)
 	defer closeFile(outFiles...)
@@ -132,9 +132,20 @@ func parseInputToOutput(parser Parser, inReader *bufio.Reader, outWriters []*buf
 			continue
 		}
 
-		transformerBuf, err := parser.Transform(buf[0])
+		transformerBuf, templateFilePath, err := parser.Transform(buf[0])
 		if err != nil {
 			return err
+		}
+		if len(templateFilePath) > 0 {
+			templateFile, err := getInputFile(templateFilePath)
+			if err != nil {
+				return err
+			}
+			defer closeFile(templateFile)
+			templateReader := bufio.NewReader(templateFile)
+			if err := parseInputToOutput(parser, templateReader, outWriters); err != nil {
+				return err
+			}
 		}
 		if transformerBuf == nil {
 			continue
