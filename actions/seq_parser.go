@@ -2,9 +2,6 @@ package actions
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
-	"io/ioutil"
-	"os"
 	"regexp"
 )
 
@@ -16,7 +13,7 @@ type Pattern struct {
 }
 
 type Parser interface {
-	Transform(input byte) ([]byte, error)
+	Transform(input byte) ([]byte, string, error)
 	Flush() []byte
 }
 
@@ -43,30 +40,29 @@ func NewSeqParser(pattern []string) Parser {
 	}
 }
 
-func (p *sequenceParser) Transform(input byte) ([]byte, error) {
+func (p *sequenceParser) Transform(input byte) ([]byte, string, error) {
 	switch true {
 	case p.isMatchedBegin(input):
 		p.beginIndex += 1
-		return nil, nil
+		return nil, "", nil
 	case p.isMatchedFileName(input):
 		p.filePath += string(input)
-		return nil, nil
+		return nil, "", nil
 	case p.isMatchedEnd(input):
 		p.endIndex += 1
 		if p.endIndex == len(p.end) {
-			output, err := p.getTemplateContent()
-			p.Reset()
-			return output, err
+			defer p.Reset()
+			return nil, p.filePath, nil
 		}
-		return nil, nil
+		return nil, "", nil
 	default:
 		output := p.begin[:p.beginIndex] + p.filePath + p.end[:p.endIndex]
 		p.Reset()
 		if p.isMatchedBegin(input) {
 			p.beginIndex += 1
-			return []byte(output), nil
+			return []byte(output), "", nil
 		} else {
-			return []byte(output + string(input)), nil
+			return []byte(output + string(input)), "", nil
 		}
 	}
 }
@@ -109,19 +105,6 @@ func (p *sequenceParser) Flush() []byte {
 	output := p.begin[:p.beginIndex] + p.filePath + p.end[:p.endIndex]
 	p.Reset()
 	return []byte(output)
-}
-
-func (p *sequenceParser) getTemplateContent() ([]byte, error) {
-	file, err := os.Open(p.filePath)
-	if err != nil {
-		return nil, errors.Wrap(err, "open")
-	}
-	defer file.Close()
-	fileContent, err := ioutil.ReadAll(file)
-	if err != nil {
-		return nil, errors.Wrap(err, "read file")
-	}
-	return fileContent, nil
 }
 
 func extractPattern(pattern []string) (string, string) {

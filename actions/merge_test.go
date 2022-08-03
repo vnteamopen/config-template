@@ -13,14 +13,17 @@ import (
 func TestParse(t *testing.T) {
 	sample1Path := "../test_samples/sample1.txt"
 	sample2Path := "../test_samples/sample2.txt"
+	template := "../test_samples/template"
+	templateOwner := "../test_samples/template_owner"
 
 	testCases := []struct {
-		name        string
-		pattern     []string
-		template    string
-		samplePath  string
-		checkResult func(expected, received string)
-		checkError  func(err error)
+		name           string
+		pattern        []string
+		template       string
+		nestedTemplate string
+		samplePath     string
+		checkResult    func(expected, received string)
+		checkError     func(err error)
 	}{
 		{
 			name:       "Matched pattern - Simple template",
@@ -111,7 +114,7 @@ func TestParse(t *testing.T) {
 			samplePath:  sample1Path,
 			checkResult: func(sampleContent, received string) {},
 			checkError: func(err error) {
-				if !strings.Contains(err.Error(), "open") {
+				if !strings.Contains(err.Error(), "input") {
 					t.Errorf("Wrong error: \n Expected: %+v\nReceived: %+v", errors.Wrap(err, "open"), err)
 				}
 			},
@@ -121,6 +124,18 @@ func TestParse(t *testing.T) {
 			pattern:    []string{"%", "%"},
 			template:   fmt.Sprintf(`%%file "%s"%%`, sample1Path),
 			samplePath: sample1Path,
+			checkResult: func(sampleContent, received string) {
+				if sampleContent != received {
+					t.Errorf("Wrong parse: \nExpected: %s\nReceived: %s", sampleContent, received)
+				}
+			},
+			checkError: func(err error) {},
+		},
+		{
+			name:           "Nested including template",
+			template:       fmt.Sprintf(`{{file "%s"}}`, templateOwner),
+			samplePath:     templateOwner,
+			nestedTemplate: template,
 			checkResult: func(sampleContent, received string) {
 				if sampleContent != received {
 					t.Errorf("Wrong parse: \nExpected: %s\nReceived: %s", sampleContent, received)
@@ -150,11 +165,42 @@ func TestParse(t *testing.T) {
 				t.Errorf("Failed to open sample file: %v+", err.Error())
 				return
 			}
+			defer sample.Close()
+
 			sampleContent, err := ioutil.ReadAll(sample)
 			if err != nil {
 				t.Errorf("Failed to read sample content: %v+", err.Error())
 				return
 			}
+
+			if len(tc.nestedTemplate) > 0 {
+				templateFile, err := os.Open(tc.nestedTemplate)
+				if err != nil {
+					t.Errorf("Failed to open template file: %v+", err.Error())
+					return
+				}
+				defer templateFile.Close()
+
+				templateContent, err := ioutil.ReadAll(templateFile)
+				if err != nil {
+					t.Errorf("Failed to read template file: %v+", err.Error())
+					return
+				}
+
+				pattern := []string{"{{", "}}"}
+				if tc.pattern != nil {
+					pattern = tc.pattern
+				}
+
+				sampleContentStr := strings.Replace(
+					string(sampleContent),
+					fmt.Sprintf("%sfile %s%s", pattern[0], tc.nestedTemplate, pattern[1]),
+					string(templateContent),
+					-1,
+				)
+				sampleContent = []byte(sampleContentStr)
+			}
+
 			tc.checkResult(string(sampleContent), writer.String())
 		})
 	}
